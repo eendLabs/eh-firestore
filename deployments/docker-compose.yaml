@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  golang:
+    image: golang:stretch
+    depends_on:
+      - firestore_emulator
+    environment:
+      FIRESTORE_EMULATOR_HOST: "firestore_emulator:8200"
+      FIRESTORE_PROJECT_ID: "dummy-project-id"
+    volumes:
+      - .:/eventhorizon
+    working_dir: /eventhorizon
+
+  firestore_emulator:
+    image: eendlabs/firestore-emulator
+    build:
+      context: ../build/package/firestore-emulator/
+      dockerfile: ./Dockerfile
+    environment:
+      FIRESTORE_PROJECT_ID: "dummy-project-id"
+      PORT: "8200"
