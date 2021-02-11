@@ -3,7 +3,9 @@ package firestore
 import (
 	"cloud.google.com/go/firestore"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	eh "github.com/looplab/eventhorizon"
 	"log"
@@ -69,15 +71,64 @@ func NewEventStoreWithClient(config *EventStoreConfig,
 	return s
 }
 
-// dbEvent is the internal event record for the Firestore event store used
-// to save and load events from the DB.
-type dbEvent struct {
-	AggregateID uuid.UUID
-	Version     int
-
-	EventType     eh.EventType
-	RawData       map[string]interface{}
-	data          eh.EventData
-	Timestamp     time.Time
+type AggregateRecord struct {
+	Namespace     string
+	AggregateID   uuid.UUID
 	AggregateType eh.AggregateType
+	Version       int
+}
+
+type AggregateEvent struct {
+	EventID       uuid.UUID
+	Namespace     string
+	AggregateID   uuid.UUID
+	AggregateType eh.AggregateType
+	EventType     eh.EventType
+	RawData       json.RawMessage
+	Timestamp     time.Time
+	Version       int
+	Context       map[string]interface{}
+	data          eh.EventData
+}
+
+// event is the private implementation of the eventhorizon.Event interface
+// for a MongoDB event store.
+type event struct {
+	AggregateEvent
+}
+
+// AggregateID implements the AggregateID method of the eventhorizon.Event interface.
+func (e event) AggregateID() uuid.UUID {
+	return e.AggregateEvent.AggregateID
+}
+
+// AggregateType implements the AggregateType method of the eventhorizon.Event interface.
+func (e event) AggregateType() eh.AggregateType {
+	return e.AggregateEvent.AggregateType
+}
+
+// EventType implements the EventType method of the eventhorizon.Event interface.
+func (e event) EventType() eh.EventType {
+	return e.AggregateEvent.EventType
+}
+
+// Data implements the Data method of the eventhorizon.Event interface.
+func (e event) Data() eh.EventData {
+	return e.AggregateEvent.data
+}
+
+// Version implements the Version method of the eventhorizon.Event interface.
+func (e event) Version() int {
+	return e.AggregateEvent.Version
+}
+
+// Timestamp implements the Timestamp method of the eventhorizon.Event interface.
+func (e event) Timestamp() time.Time {
+	return e.AggregateEvent.Timestamp
+}
+
+// String implements the String method of the eventhorizon.Event interface.
+func (e event) String() string {
+	return fmt.Sprintf("%s@%d", e.AggregateEvent.EventType,
+		e.AggregateEvent.Version)
 }
