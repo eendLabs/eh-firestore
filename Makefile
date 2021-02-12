@@ -5,7 +5,7 @@ test:
 .PHONY: test
 
 test_docker:
-	docker-compose run -f ./deployments/docker-compose.yaml --rm golang make test
+	docker-compose -f ./deployments/docker-compose.yaml run --rm app make test
 	docker-compose -f ./deployments/docker-compose.yaml down
 .PHONY: test_docker
 
@@ -14,7 +14,7 @@ cover:
 .PHONY: cover
 
 cover_docker:
-	docker-compose -f ./deployments/docker-compose.yaml run --rm golang make cover
+	docker-compose -f ./deployments/docker-compose.yaml run --rm app make cover
 	docker-compose -f ./deployments/docker-compose.yaml down
 .PHONY: cover_docker
 
@@ -32,7 +32,7 @@ services:
 .PHONY: services
 
 stop:
-	docker-compose down
+	docker-compose -f ./deployments/docker-compose.yaml down
 .PHONY: stop
 
 clean:

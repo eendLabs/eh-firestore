@@ -1,8 +1,11 @@
 version: "3.8"
 
 services:
-  golang:
-    image: golang:stretch
+  app:
+    image: eendlabs/eh-firestore
+    build:
+      context: ../
+      dockerfile: ./build/package/app/Dockerfile
     depends_on:
       - firestore_emulator
     environment:
