@@ -9,7 +9,7 @@ import (
 
 func TestEventStore(t *testing.T) {
 	ctx := context.Background()
-	store, err := NewEventStore(&EventStoreConfig{
+	store, err := NewEventStore(&Config{
 		projectID:  "dummy-project-id",
 		collection: "test",
 	})

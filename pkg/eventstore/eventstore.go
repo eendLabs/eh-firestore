@@ -36,13 +36,13 @@ var ErrCouldNotSaveAggregate = errors.New("could not save aggregate")
 var ErrVersionConflict = errors.New("can not create/update aggregate")
 
 // EventStoreConfig is a config for the Firestore event store.
-type EventStoreConfig struct {
+type Config struct {
 	collection string
 	projectID  string
 	dbName     func(ctx context.Context) string
 }
 
-func (c *EventStoreConfig) provideDefaults() {
+func (c *Config) provideDefaults() {
 	if c.projectID == "" {
 		c.projectID = "eventhorizonEvents"
 	}
@@ -54,13 +54,13 @@ func (c *EventStoreConfig) provideDefaults() {
 // EventStore implements an EventStore for DynamoDB.
 type EventStore struct {
 	client  *firestore.Client
-	config  *EventStoreConfig
+	config  *Config
 	encoder Encoder
 }
 
 // NewEventStore creates a new EventStore.
 func NewEventStore(
-	config *EventStoreConfig) (*EventStore, error) {
+	config *Config) (*EventStore, error) {
 	config.provideDefaults()
 
 	client, err := firestore.NewClient(context.TODO(), config.projectID)
@@ -72,7 +72,7 @@ func NewEventStore(
 }
 
 // NewEventStoreWithClient creates a new EventStore with DB
-func NewEventStoreWithClient(config *EventStoreConfig,
+func NewEventStoreWithClient(config *Config,
 	client *firestore.Client) (*EventStore, error) {
 	if client == nil {
 		return nil, ErrNoDBClient
@@ -334,7 +334,7 @@ func (s *EventStore) RenameEvent(ctx context.Context,
 }
 
 // Close closes the database client.
-func (s *EventStore) Close(ctx context.Context) {
+func (s *EventStore) Close(_ context.Context) {
 	if err := s.client.Close(); err != nil {
 		log.Fatalf("could not close the client: %v", err)
 	}
