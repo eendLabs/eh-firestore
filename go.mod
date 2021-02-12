@@ -6,4 +6,5 @@ require (
 	cloud.google.com/go/firestore v1.1.0
 	github.com/google/uuid v1.1.2
 	github.com/looplab/eventhorizon v0.10.0
+	google.golang.org/api v0.35.0
 )
