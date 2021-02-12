@@ -295,32 +295,43 @@ func (s *EventStore) RenameEvent(ctx context.Context,
 
 	err := s.client.RunTransaction(ctx, func(ctx context.Context,
 		tx *firestore.Transaction) error {
-		query := s.client.Collection(s.config.dbName(ctx) + "*/events/")
-		iter := query.Where("eventType", "==", from.String()).
-			Documents(ctx)
+		query := s.client.Collection(s.config.dbName(ctx))
+		iter := query.Documents(ctx)
 		for {
 			doc, err := iter.Next()
-
 			if err == iterator.Done {
 				break
 			}
 			if err != nil {
 				return err
 			}
-			if err := tx.Update(doc.Ref, []firestore.Update{
-				{
-					Path:  "eventType",
-					Value: to.String(),
-				},
-			}); err != nil {
-				return eh.EventStoreError{
-					Err:       ErrCouldNotSaveAggregate,
-					BaseErr:   err,
-					Namespace: ns,
+			query := doc.Ref.Collection("events").
+				Where("eventType", "==", from.String()).
+				OrderBy("version", firestore.Asc)
+			iter := query.Documents(ctx)
+
+			for {
+				doc, err := iter.Next()
+				if err == iterator.Done {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				if err := tx.Update(doc.Ref, []firestore.Update{
+					{
+						Path:  "eventType",
+						Value: to.String(),
+					},
+				}); err != nil {
+					return eh.EventStoreError{
+						Err:       ErrCouldNotSaveAggregate,
+						BaseErr:   err,
+						Namespace: ns,
+					}
 				}
 			}
 		}
-
 		return nil
 	})
 	if err != nil {
