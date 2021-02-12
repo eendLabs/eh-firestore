@@ -9,7 +9,7 @@ services:
       FIRESTORE_EMULATOR_HOST: "firestore_emulator:8200"
       FIRESTORE_PROJECT_ID: "dummy-project-id"
     volumes:
-      - .:/eventhorizon
+      - ../:/eventhorizon
     working_dir: /eventhorizon
 
   firestore_emulator:
@@ -20,3 +20,5 @@ services:
     environment:
       FIRESTORE_PROJECT_ID: "dummy-project-id"
       PORT: "8200"
+    ports:
+      - "8200:8200"
