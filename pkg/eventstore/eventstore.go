@@ -291,7 +291,46 @@ func (s *EventStore) Replace(ctx context.Context, e eh.Event) error {
 //interface.
 func (s *EventStore) RenameEvent(ctx context.Context,
 	from, to eh.EventType) error {
-	panic("implement rename")
+	ns := eh.NamespaceFromContext(ctx)
+
+	err := s.client.RunTransaction(ctx, func(ctx context.Context,
+		tx *firestore.Transaction) error {
+		query := s.client.Collection(s.config.dbName(ctx) + "*/events/")
+		iter := query.Where("eventType", "==", from.String()).
+			Documents(ctx)
+		for {
+			doc, err := iter.Next()
+
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			if err := tx.Update(doc.Ref, []firestore.Update{
+				{
+					Path:  "eventType",
+					Value: to.String(),
+				},
+			}); err != nil {
+				return eh.EventStoreError{
+					Err:       ErrCouldNotSaveAggregate,
+					BaseErr:   err,
+					Namespace: ns,
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return eh.EventStoreError{
+			Err:       ErrCouldNotSaveAggregate,
+			BaseErr:   err,
+			Namespace: ns,
+		}
+	}
+	return nil
 }
 
 // Close closes the database client.
