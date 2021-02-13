@@ -32,8 +32,6 @@ var ErrCouldNotUnmarshalEvent = errors.New("could not unmarshal event")
 // ErrCouldNotSaveAggregate is when an aggregate could not be saved.
 var ErrCouldNotSaveAggregate = errors.New("could not save aggregate")
 
-var ErrVersionConflict = errors.New("can not create/update aggregate")
-
 // EventStoreConfig is a config for the Firestore event store.
 type Config struct {
 	Collection string
@@ -138,7 +136,7 @@ func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 	err := s.client.RunTransaction(ctx, func(ctx context.Context,
 		tx *firestore.Transaction) error {
 		aggregate := &aggregateRecord{
-			AggregateID:   aggregateID,
+			AggregateID:   aggregateID.String(),
 			AggregateType: aggregateType,
 		}
 
@@ -154,7 +152,7 @@ func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 			}
 		} else {
 			query := s.client.Collection(s.config.dbName(ctx)).
-				Where("aggregateID", "==", aggregateID).
+				Where("aggregateID", "==", aggregateID.String()).
 				Where("version", "==", originalVersion)
 			iter := query.Documents(ctx)
 			aggregates, _ := iter.GetAll()
@@ -422,7 +420,7 @@ func (s *EventStore) Clear(ctx context.Context) error {
 
 // aggregateRecord is the Database representation of an aggregate.
 type aggregateRecord struct {
-	AggregateID   uuid.UUID        `firestore:"aggregateID"`
+	AggregateID   string        `firestore:"aggregateID"`
 	AggregateType eh.AggregateType `firestore:"aggregateType"`
 	Version       int              `firestore:"version"`
 }
