@@ -37,17 +37,17 @@ var ErrVersionConflict = errors.New("can not create/update aggregate")
 
 // EventStoreConfig is a config for the Firestore event store.
 type Config struct {
-	collection string
-	projectID  string
+	Collection string
+	ProjectID  string
 	dbName     func(ctx context.Context) string
 }
 
 func (c *Config) provideDefaults() {
-	if c.projectID == "" {
-		c.projectID = "eventhorizonEvents"
+	if c.ProjectID == "" {
+		c.ProjectID = "eventhorizonEvents"
 	}
-	if c.collection == "" {
-		c.collection = "us-east-1"
+	if c.Collection == "" {
+		c.Collection = "us-east-1"
 	}
 }
 
@@ -63,7 +63,7 @@ func NewEventStore(
 	config *Config) (*EventStore, error) {
 	config.provideDefaults()
 
-	client, err := firestore.NewClient(context.TODO(), config.projectID)
+	client, err := firestore.NewClient(context.TODO(), config.ProjectID)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf(ErrCouldNotDialDB, err))
 	}
@@ -86,7 +86,7 @@ func NewEventStoreWithClient(config *Config,
 
 	s.config.dbName = func(ctx context.Context) string {
 		ns := eh.NamespaceFromContext(ctx)
-		return s.config.collection + "_" + ns
+		return s.config.Collection + "_" + ns
 	}
 
 	return s, nil

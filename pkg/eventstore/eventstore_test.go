@@ -10,8 +10,8 @@ import (
 func TestEventStore(t *testing.T) {
 	ctx := context.Background()
 	store, err := NewEventStore(&Config{
-		projectID:  "dummy-project-id",
-		collection: "test",
+		ProjectID:  "dummy-project-id",
+		Collection: "test",
 	})
 
 	if err != nil {
