@@ -2,7 +2,6 @@ package eventstore
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -177,7 +176,7 @@ func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 			aggregateID.String()).Collection("events")
 
 		for _, e := range dbEvents {
-			item := eventCollection.Doc(e.EventID.String())
+			item := eventCollection.Doc(e.EventID)
 
 			if err := tx.Set(item, e); err != nil {
 				return eh.EventStoreError{
@@ -235,14 +234,14 @@ func (s *EventStore) Load(ctx context.Context,
 				}
 			}
 			if aggEvent.data, err = s.encoder.
-				Unmarshal(aggEvent.EventType, aggEvent.RawData); err != nil {
+				Unmarshal(aggEvent.EventType, []byte(aggEvent.RawData)); err != nil {
 				return nil, eh.EventStoreError{
 					Err:       ErrCouldNotUnmarshalEvent,
 					BaseErr:   err,
 					Namespace: ns,
 				}
 			}
-			aggEvent.RawData = nil
+			aggEvent.RawData = ""
 		}
 		event := eh.NewEvent(
 			aggEvent.EventType,
@@ -250,7 +249,7 @@ func (s *EventStore) Load(ctx context.Context,
 			aggEvent.Timestamp,
 			eh.ForAggregate(
 				aggEvent.AggregateType,
-				aggEvent.AggregateID,
+				uuid.MustParse(aggEvent.AggregateID),
 				aggEvent.Version,
 			),
 			eh.WithMetadata(aggEvent.Metadata),
@@ -431,13 +430,13 @@ type aggregateRecord struct {
 // aggregateEvent is the internal event record for the MongoDB event store used
 // to save and load events from the DB.
 type aggregateEvent struct {
-	AggregateID   uuid.UUID              `firestore:"aggregateID"`
+	AggregateID   string              `firestore:"aggregateID"`
 	AggregateType eh.AggregateType       `firestore:"aggregateType"`
 	data          eh.EventData           `firestore:"-"`
-	EventID       uuid.UUID              `firestore:"eventID"`
+	EventID       string              `firestore:"eventID"`
 	EventType     eh.EventType           `firestore:"eventType"`
 	Metadata      map[string]interface{} `firestore:"metadata"`
-	RawData       json.RawMessage        `firestore:"data,omitempty"`
+	RawData       string        `firestore:"data,omitempty"`
 	Timestamp     time.Time              `firestore:"timestamp"`
 	Version       int                    `firestore:"version"`
 }
@@ -459,11 +458,11 @@ func (s *EventStore) newAggregateEvent(ctx context.Context,
 
 	return &aggregateEvent{
 		AggregateType: event.AggregateType(),
-		AggregateID:   event.AggregateID(),
-		EventID:       uuid.New(),
+		AggregateID:   event.AggregateID().String(),
+		EventID:       uuid.New().String(),
 		EventType:     event.EventType(),
 		Metadata:      event.Metadata(),
-		RawData:       raw,
+		RawData:       string(raw),
 		Timestamp:     event.Timestamp(),
 		Version:       event.Version(),
 	}, nil
@@ -478,7 +477,7 @@ type event struct {
 // AggrgateID implements the AggrgateID method of the eventhorizon.Event
 //interface.
 func (e event) AggregateID() uuid.UUID {
-	return e.aggregateEvent.AggregateID
+	return uuid.MustParse(e.aggregateEvent.AggregateID)
 }
 
 // AggregateType implements the AggregateType method of the eventhorizon.Event
