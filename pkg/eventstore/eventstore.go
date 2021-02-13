@@ -92,27 +92,6 @@ func NewEventStoreWithClient(config *Config,
 	return s, nil
 }
 
-type Option func(*EventStore) error
-
-// WithPrefixAsDBName uses only the prefix as DB name, without namespace
-//support.
-func WithPrefixAsDBName() Option {
-	return func(s *EventStore) error {
-		s.config.dbName = func(context.Context) string {
-			return s.config.collection
-		}
-		return nil
-	}
-}
-
-// WithDBName uses a custom DB name function.
-func WithDBName(dbName func(context.Context) string) Option {
-	return func(s *EventStore) error {
-		s.config.dbName = dbName
-		return nil
-	}
-}
-
 // Save implements the Save method of the eventhorizon.EventStore interface.
 func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 	originalVersion int) error {
@@ -283,8 +262,67 @@ func (s *EventStore) Load(ctx context.Context,
 
 // Replace implements the Replace method of the eventhorizon.EventStore
 //interface.
-func (s *EventStore) Replace(ctx context.Context, e eh.Event) error {
-	panic("implement replace")
+func (s *EventStore) Replace(ctx context.Context, event eh.Event) error {
+	ns := eh.NamespaceFromContext(ctx)
+	err := s.client.RunTransaction(ctx, func(ctx context.Context,
+		tx *firestore.Transaction) error {
+
+		aggRecord, err := s.client.Collection(s.config.dbName(ctx)).
+			Doc(event.AggregateID().String()).
+			Get(ctx)
+		if aggRecord == nil {
+			return eh.ErrAggregateNotFound
+		}
+		if aggRecord.Exists() == false {
+			return eh.ErrAggregateNotFound
+		}
+		if err != nil {
+			return eh.EventStoreError{
+				Err:       err,
+				Namespace: ns,
+			}
+		}
+
+		query := aggRecord.Ref.
+			Collection("events").
+			Where("version", "==", event.Version())
+		aggEventIter := query.Documents(ctx)
+		aggEvents, err := aggEventIter.GetAll()
+		if err != nil {
+			return eh.EventStoreError{
+				Err:       err,
+				Namespace: ns,
+			}
+		}
+
+		if len(aggEvents) == 0 {
+			return eh.ErrInvalidEvent
+		}
+
+		for _, aggEvent := range aggEvents {
+			// Create the event record for the Database.
+			e, err := s.newAggregateEvent(ctx, event)
+			if err != nil {
+				return err
+			}
+
+			err = tx.Set(aggEvent.Ref, e)
+			if err != nil {
+				return eh.EventStoreError{
+					Err:       err,
+					Namespace: ns,
+				}
+			}
+
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // RenameEvent implements the RenameEvent method of the eventhorizon.EventStore
