@@ -16,12 +16,15 @@ services:
     working_dir: /eventhorizon
 
   firestore_emulator:
-    image: eendlabs/firestore-emulator
-    build:
-      context: ../build/package/firestore-emulator/
-      dockerfile: ./Dockerfile
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:328.0.0-emulators
     environment:
       FIRESTORE_PROJECT_ID: "dummy-project-id"
-      PORT: "8200"
     ports:
       - "8200:8200"
+    entrypoint:
+      - gcloud
+      - beta
+      - emulators
+      - firestore
+      - start
+      - "--host-port=0.0.0.0:8200"
