@@ -2,14 +2,16 @@ package eventstore
 
 import (
 	"context"
+	"testing"
+
+	"github.com/eendlabs/eh-firestore/share"
 	eh "github.com/looplab/eventhorizon"
 	testutil "github.com/looplab/eventhorizon/eventstore"
-	"testing"
 )
 
 func TestEventStore(t *testing.T) {
 	ctx := context.Background()
-	store, err := NewEventStore(&Config{
+	store, err := NewEventStore(&share.Config{
 		ProjectID:  "dummy-project-id",
 		Collection: "test",
 	})

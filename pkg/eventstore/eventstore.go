@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/eendlabs/eh-firestore/share"
 	"github.com/google/uuid"
 	eh "github.com/looplab/eventhorizon"
 	"google.golang.org/api/iterator"
@@ -32,32 +33,16 @@ var ErrCouldNotUnmarshalEvent = errors.New("could not unmarshal event")
 // ErrCouldNotSaveAggregate is when an aggregate could not be saved.
 var ErrCouldNotSaveAggregate = errors.New("could not save aggregate")
 
-// EventStoreConfig is a config for the Firestore event store.
-type Config struct {
-	Collection string
-	ProjectID  string
-	dbName     func(ctx context.Context) string
-}
-
-func (c *Config) provideDefaults() {
-	if c.ProjectID == "" {
-		c.ProjectID = "eventhorizonEvents"
-	}
-	if c.Collection == "" {
-		c.Collection = "us-east-1"
-	}
-}
-
 // EventStore implements an EventStore for DynamoDB.
 type EventStore struct {
 	client  *firestore.Client
-	config  *Config
+	config  *share.Config
 	encoder Encoder
 }
 
 // NewEventStore creates a new EventStore.
 func NewEventStore(
-	config *Config) (*EventStore, error) {
+	config *share.Config) (*EventStore, error) {
 	config.provideDefaults()
 
 	client, err := firestore.NewClient(context.TODO(), config.ProjectID)
@@ -69,7 +54,7 @@ func NewEventStore(
 }
 
 // NewEventStoreWithClient creates a new EventStore with DB
-func NewEventStoreWithClient(config *Config,
+func NewEventStoreWithClient(config *share.Config,
 	client *firestore.Client) (*EventStore, error) {
 	if client == nil {
 		return nil, ErrNoDBClient
@@ -420,7 +405,7 @@ func (s *EventStore) Clear(ctx context.Context) error {
 
 // aggregateRecord is the Database representation of an aggregate.
 type aggregateRecord struct {
-	AggregateID   string        `firestore:"aggregateID"`
+	AggregateID   string           `firestore:"aggregateID"`
 	AggregateType eh.AggregateType `firestore:"aggregateType"`
 	Version       int              `firestore:"version"`
 }
@@ -428,13 +413,13 @@ type aggregateRecord struct {
 // aggregateEvent is the internal event record for the MongoDB event store used
 // to save and load events from the DB.
 type aggregateEvent struct {
-	AggregateID   string              `firestore:"aggregateID"`
+	AggregateID   string                 `firestore:"aggregateID"`
 	AggregateType eh.AggregateType       `firestore:"aggregateType"`
 	data          eh.EventData           `firestore:"-"`
-	EventID       string              `firestore:"eventID"`
+	EventID       string                 `firestore:"eventID"`
 	EventType     eh.EventType           `firestore:"eventType"`
 	Metadata      map[string]interface{} `firestore:"metadata"`
-	RawData       string        `firestore:"data,omitempty"`
+	RawData       string                 `firestore:"data,omitempty"`
 	Timestamp     time.Time              `firestore:"timestamp"`
 	Version       int                    `firestore:"version"`
 }
