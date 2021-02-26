@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "eventstoreTest",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/pkg/eventstore",
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [],
+            "showLog": true
+        },       {
+            "name": "eventstoreDebug",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/pkg/eventstore",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "FIRESTORE_EMULATOR_HOST": "firestore_emulator:8200",
+                "FIRESTORE_PROJECT_ID": "dummy-project-id"
+            },
+            "args": [],
+            "showLog": true
+        }
+    ]
+}
