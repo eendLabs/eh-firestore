@@ -11,17 +11,34 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [],
             "showLog": true
-        },       {
+        }, {
             "name": "eventstoreDebug",
             "type": "go",
             "request": "launch",
-            "mode": "test",
+            "mode": "debug",
             "program": "${workspaceFolder}/pkg/eventstore",
             "cwd": "${workspaceFolder}",
-            "env": {
-                "FIRESTORE_EMULATOR_HOST": "firestore_emulator:8200",
-                "FIRESTORE_PROJECT_ID": "dummy-project-id"
-            },
+            "envFile": "${workspaceFolder}/.env",
+            "args": [],
+            "showLog": true
+        }, {
+            "name": "repoTest",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/pkg/repo",
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [],
+            "showLog": true
+        }, {
+            "name": "repoDebug",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/pkg/repo",
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
             "args": [],
             "showLog": true
         }
