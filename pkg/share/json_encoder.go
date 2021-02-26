@@ -1,4 +1,4 @@
-package eventstore
+package share
 
 import (
 	"encoding/json"
@@ -12,16 +12,16 @@ type Encoder interface {
 	String() string
 }
 
-type jsonEncoder struct{}
+type JsonEncoder struct{}
 
-func (jsonEncoder) Marshal(data eh.EventData) ([]byte, error) {
+func (JsonEncoder) Marshal(data eh.EventData) ([]byte, error) {
 	if data != nil {
 		return json.Marshal(data)
 	}
 	return nil, nil
 }
 
-func (jsonEncoder) Unmarshal(eventType eh.EventType,
+func (JsonEncoder) Unmarshal(eventType eh.EventType,
 	raw []byte) (data eh.EventData, err error) {
 	if len(raw) == 0 {
 		return nil, nil
@@ -34,6 +34,6 @@ func (jsonEncoder) Unmarshal(eventType eh.EventType,
 	return nil, err
 }
 
-func (jsonEncoder) String() string {
+func (JsonEncoder) String() string {
 	return "json"
 }

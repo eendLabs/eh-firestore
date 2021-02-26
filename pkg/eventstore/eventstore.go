@@ -8,16 +8,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/eendLabs/eh-firestore/pkg/share"
 	"github.com/google/uuid"
 	eh "github.com/looplab/eventhorizon"
 	"google.golang.org/api/iterator"
 )
-
-// ErrCouldNotDialDB is when the database could not be dialed.
-var ErrCouldNotDialDB = "could not dial database %v"
-
-// ErrNoDBClient is when no database client is set.
-var ErrNoDBClient = errors.New("no database client")
 
 // ErrCouldNotClearDB is when the database could not be cleared.
 var ErrCouldNotClearDB = errors.New("could not clear database")
@@ -32,56 +27,40 @@ var ErrCouldNotUnmarshalEvent = errors.New("could not unmarshal event")
 // ErrCouldNotSaveAggregate is when an aggregate could not be saved.
 var ErrCouldNotSaveAggregate = errors.New("could not save aggregate")
 
-// EventStoreConfig is a config for the Firestore event store.
-type Config struct {
-	Collection string
-	ProjectID  string
-	dbName     func(ctx context.Context) string
-}
-
-func (c *Config) provideDefaults() {
-	if c.ProjectID == "" {
-		c.ProjectID = "eventhorizonEvents"
-	}
-	if c.Collection == "" {
-		c.Collection = "us-east-1"
-	}
-}
-
 // EventStore implements an EventStore for DynamoDB.
 type EventStore struct {
 	client  *firestore.Client
-	config  *Config
-	encoder Encoder
+	config  *share.Config
+	encoder share.Encoder
 }
 
 // NewEventStore creates a new EventStore.
 func NewEventStore(
-	config *Config) (*EventStore, error) {
-	config.provideDefaults()
+	config *share.Config) (*EventStore, error) {
+	config.ProvideDefaults()
 
 	client, err := firestore.NewClient(context.TODO(), config.ProjectID)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf(ErrCouldNotDialDB, err))
+		return nil, errors.New(fmt.Sprintf(share.ErrCouldNotDialDB, err))
 	}
 
 	return NewEventStoreWithClient(config, client)
 }
 
 // NewEventStoreWithClient creates a new EventStore with DB
-func NewEventStoreWithClient(config *Config,
+func NewEventStoreWithClient(config *share.Config,
 	client *firestore.Client) (*EventStore, error) {
 	if client == nil {
-		return nil, ErrNoDBClient
+		return nil, share.ErrNoDBClient
 	}
 
 	s := &EventStore{
 		client:  client,
 		config:  config,
-		encoder: &jsonEncoder{},
+		encoder: &share.JsonEncoder{},
 	}
 
-	s.config.dbName = func(ctx context.Context) string {
+	s.config.DbName = func(ctx context.Context) string {
 		ns := eh.NamespaceFromContext(ctx)
 		return s.config.Collection + "_" + ns
 	}
@@ -142,7 +121,7 @@ func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 
 		if originalVersion == 0 {
 			aggregate.Version = len(dbEvents)
-			if err := tx.Set(s.client.Collection(s.config.dbName(ctx)).
+			if err := tx.Set(s.client.Collection(s.config.DbName(ctx)).
 				Doc(aggregateID.String()), aggregate); err != nil {
 				return eh.EventStoreError{
 					Err:       ErrCouldNotSaveAggregate,
@@ -151,7 +130,7 @@ func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 				}
 			}
 		} else {
-			query := s.client.Collection(s.config.dbName(ctx)).
+			query := s.client.Collection(s.config.DbName(ctx)).
 				Where("aggregateID", "==", aggregateID.String()).
 				Where("version", "==", originalVersion)
 			iter := query.Documents(ctx)
@@ -170,7 +149,7 @@ func (s *EventStore) Save(ctx context.Context, events []eh.Event,
 			}
 		}
 
-		eventCollection := s.client.Collection(s.config.dbName(ctx)).Doc(
+		eventCollection := s.client.Collection(s.config.DbName(ctx)).Doc(
 			aggregateID.String()).Collection("events")
 
 		for _, e := range dbEvents {
@@ -204,7 +183,7 @@ func (s *EventStore) Load(ctx context.Context,
 	u uuid.UUID) ([]eh.Event, error) {
 	ns := eh.NamespaceFromContext(ctx)
 	query := s.client.
-		Collection(s.config.dbName(ctx)).
+		Collection(s.config.DbName(ctx)).
 		Doc(u.String()).
 		Collection("events").
 		OrderBy("version", firestore.Asc)
@@ -264,7 +243,7 @@ func (s *EventStore) Replace(ctx context.Context, event eh.Event) error {
 	err := s.client.RunTransaction(ctx, func(ctx context.Context,
 		tx *firestore.Transaction) error {
 
-		aggRecord, err := s.client.Collection(s.config.dbName(ctx)).
+		aggRecord, err := s.client.Collection(s.config.DbName(ctx)).
 			Doc(event.AggregateID().String()).
 			Get(ctx)
 		if aggRecord == nil {
@@ -330,7 +309,7 @@ func (s *EventStore) RenameEvent(ctx context.Context,
 
 	err := s.client.RunTransaction(ctx, func(ctx context.Context,
 		tx *firestore.Transaction) error {
-		query := s.client.Collection(s.config.dbName(ctx))
+		query := s.client.Collection(s.config.DbName(ctx))
 		iter := query.Documents(ctx)
 		for {
 			doc, err := iter.Next()
@@ -392,7 +371,7 @@ func (s *EventStore) Clear(ctx context.Context) error {
 
 	err := s.client.RunTransaction(ctx, func(ctx context.Context,
 		tx *firestore.Transaction) (err error) {
-		query := s.client.Collection(s.config.dbName(ctx))
+		query := s.client.Collection(s.config.DbName(ctx))
 		iter := query.Documents(ctx)
 		for {
 			doc, err := iter.Next()
@@ -420,7 +399,7 @@ func (s *EventStore) Clear(ctx context.Context) error {
 
 // aggregateRecord is the Database representation of an aggregate.
 type aggregateRecord struct {
-	AggregateID   string        `firestore:"aggregateID"`
+	AggregateID   string           `firestore:"aggregateID"`
 	AggregateType eh.AggregateType `firestore:"aggregateType"`
 	Version       int              `firestore:"version"`
 }
@@ -428,13 +407,13 @@ type aggregateRecord struct {
 // aggregateEvent is the internal event record for the MongoDB event store used
 // to save and load events from the DB.
 type aggregateEvent struct {
-	AggregateID   string              `firestore:"aggregateID"`
+	AggregateID   string                 `firestore:"aggregateID"`
 	AggregateType eh.AggregateType       `firestore:"aggregateType"`
 	data          eh.EventData           `firestore:"-"`
-	EventID       string              `firestore:"eventID"`
+	EventID       string                 `firestore:"eventID"`
 	EventType     eh.EventType           `firestore:"eventType"`
 	Metadata      map[string]interface{} `firestore:"metadata"`
-	RawData       string        `firestore:"data,omitempty"`
+	RawData       string                 `firestore:"data,omitempty"`
 	Timestamp     time.Time              `firestore:"timestamp"`
 	Version       int                    `firestore:"version"`
 }
