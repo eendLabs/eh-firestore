@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/eendlabs/eh-firestore/share"
+	"github.com/eendLabs/eh-firestore/pkg/share"
 	eh "github.com/looplab/eventhorizon"
 	testutil "github.com/looplab/eventhorizon/eventstore"
 )

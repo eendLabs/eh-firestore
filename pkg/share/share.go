@@ -8,10 +8,10 @@ import (
 type Config struct {
 	Collection string
 	ProjectID  string
-	dbName     func(ctx context.Context) string
+	DbName     func(ctx context.Context) string
 }
 
-func (c *Config) provideDefaults() {
+func (c *Config) ProvideDefaults() {
 	if c.ProjectID == "" {
 		c.ProjectID = "eventhorizonEvents"
 	}
