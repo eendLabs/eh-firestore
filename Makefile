@@ -4,6 +4,19 @@ test:
 	go test ./...
 .PHONY: test
 
+build_image:
+	docker-compose -f ./deployments/docker-compose.yaml build app
+.PHONE: build_image
+
+test_repo:
+	go test ./pkg/repo/repo_test.go
+.PHONY: test_repo
+
+test_docker_repo:
+	docker-compose -f ./deployments/docker-compose.yaml run --rm app make test_repo
+	docker-compose -f ./deployments/docker-compose.yaml down
+.PHONY: test_docker_repo
+
 test_docker:
 	docker-compose -f ./deployments/docker-compose.yaml run --rm app make test
 	docker-compose -f ./deployments/docker-compose.yaml down

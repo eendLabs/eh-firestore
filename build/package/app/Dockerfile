@@ -1,4 +1,4 @@
-FROM golang:stretch AS build-env
+FROM golang:1.15-stretch AS build-env
 ENV GO111MODULE=on
 
 COPY go.* /go-src/
